@@ -1,0 +1,150 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 05 Robustness Analysis\n",
+    "\n",
+    "Simulates MNAR missingness + noise on the validation set and evaluates the performance retention of DeepTriage-CN, TabNet, and Vitals-only XGBoost. Reproduces Supplementary Figure 1."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import sys\n",
+    "sys.path.append(\"..\")\n",
+    "\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import yaml\n",
+    "import joblib\n",
+    "from pathlib import Path\n",
+    "\n",
+    "from src.preprocess import load_and_split_data, preprocess_structured, preprocess_text, get_labels\n",
+    "from src.robustness import simulate_degraded_data\n",
+    "from src.structured_encoder import STRUCTURED_FEATURE_NAMES\n",
+    "from evaluation.metrics import compute_all_binary_metrics\n",
+    "from visualization.plot_robustness import plot_robustness_bars"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with open(\"../config.yaml\") as f:\n",
+    "    config = yaml.safe_load(f)\n",
+    "rob_cfg = config[\"robustness\"]\n",
+    "output_dir = Path(config[\"output_paths\"][\"results_dir\"])\n",
+    "fig_dir = Path(config[\"output_paths\"][\"figures_dir\"])\n",
+    "random_state = config[\"random_state\"]\n",
+    "threshold = config[\"evaluation\"][\"optimal_threshold\"]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Load data and models\n",
+    "train_df, val_df = load_and_split_data(\n",
+    "    config[\"data\"][\"raw_data_path\"],\n",
+    "    training_cutoff_date=config[\"data\"][\"training_cutoff_date\"],\n",
+    "    validation_start_date=config[\"data\"][\"validation_start_date\"],\n",
+    "    random_state=random_state,\n",
+    ")\n",
+    "X_train_raw, X_val_raw, scaler = preprocess_structured(train_df, val_df)\n",
+    "train_texts, val_texts = preprocess_text(train_df, val_df)\n",
+    "y_train, y_val = get_labels(train_df, val_df)\n",
+    "\n",
+    "deeptriage = joblib.load(\"../outputs/models/deeptriage_cn.pkl\")\n",
+    "vit_xgb = joblib.load(\"../outputs/models/vitals_only_xgb.pkl\")\n",
+    "# TabNet\n",
+    "from src.tabnet_model import TabNetWrapper\n",
+    "tabnet = TabNetWrapper()\n",
+    "tabnet.load(\"../outputs/models/tabnet\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Baseline AUROC on clean validation data\n",
+    "text_emb_val = deeptriage.text_encoder.encode(val_texts.tolist())\n",
+    "X_val_std = scaler.transform(X_val_raw)\n",
+    "X_fused = np.hstack([text_emb_val, X_val_std])\n",
+    "\n",
+    "baseline_auroc = {}\n",
+    "baseline_auroc[\"DeepTriage-CN\"] = compute_all_binary_metrics(y_val, deeptriage.classifier.predict_proba(X_fused)[:,1], threshold)[\"auroc\"]\n",
+    "baseline_auroc[\"TabNet\"] = compute_all_binary_metrics(y_val, tabnet.predict_proba(X_val_raw)[:,1], threshold)[\"auroc\"]\n",
+    "baseline_auroc[\"XGBoost (Vitals-only)\"] = compute_all_binary_metrics(y_val, vit_xgb.predict_proba(X_val_raw), threshold)[\"auroc\"]\n",
+    "print(\"Baseline AUROCs:\", baseline_auroc)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Simulate degradation at 30% missing + noise\n",
+    "degraded_sets = simulate_degraded_data(\n",
+    "    X_val_raw,\n",
+    "    STRUCTURED_FEATURE_NAMES,\n",
+    "    missing_proportions=[0.3],\n",
+    "    noise_sigma=rob_cfg[\"noise_sigma_multiplier\"],\n",
+    "    seed=random_state,\n",
+    ")\n",
+    "X_val_degraded = degraded_sets[0.3]\n",
+    "X_val_degraded_std = scaler.transform(X_val_degraded)  # scaler handles NaN\n",
+    "\n",
+    "# Evaluate models on degraded data\n",
+    "degraded_auroc = {}\n",
+    "# DeepTriage-CN on degraded structured data (text is clean)\n",
+    "X_fused_degr = np.hstack([text_emb_val, X_val_degraded_std])\n",
+    "degraded_auroc[\"DeepTriage-CN\"] = compute_all_binary_metrics(y_val, deeptriage.classifier.predict_proba(X_fused_degr)[:,1], threshold)[\"auroc\"]\n",
+    "\n",
+    "# TabNet\n",
+    "degraded_auroc[\"TabNet\"] = compute_all_binary_metrics(y_val, tabnet.predict_proba(X_val_degraded)[:,1], threshold)[\"auroc\"]\n",
+    "\n",
+    "# Vitals-only XGBoost\n",
+    "degraded_auroc[\"XGBoost (Vitals-only)\"] = compute_all_binary_metrics(y_val, vit_xgb.predict_proba(X_val_degraded), threshold)[\"auroc\"]\n",
+    "\n",
+    "print(\"Degraded AUROCs:\", degraded_auroc)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot robustness\n",
+    "plot_robustness_bars(baseline_auroc, degraded_auroc,\n",
+    "                     save_path=str(fig_dir / \"supp_figure1_robustness.tiff\"))\n",
+    "\n",
+    "# Save retention data\n",
+    "retention = {k: degraded_auroc[k]/baseline_auroc[k] for k in baseline_auroc}\n",
+    "pd.Series(retention).to_csv(output_dir / \"robustness_retention.csv\")\n",
+    "print(\"Robustness analysis complete.\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "deeptriage-cn",
+   "language": "python",
+   "name": "deeptriage-cn"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

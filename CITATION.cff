@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Lin"
+  given-names: "Wenjia"
+  orcid: "https://orcid.org/0000-0000-0000-0000" # 请替换
+- family-names: "Chen"
+  given-names: "Wenliang"
+- family-names: "Wei"
+  given-names: "Guan"
+- family-names: "Huang"
+  given-names: "Xiaolei"
+title: "DeepTriage-CN: Integrating Clinical Text with Vital Signs for Emergency Department Admission Prediction in an Aging Population"
+doi: 10.5281/zenodo.XXXXXXX # 上传Zenodo后获取
+date-released: 2025-05-07
+url: "https://github.com/你的用户名/DeepTriage-CN" # 请替换
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Lin"
+    given-names: "Wenjia"
+  - family-names: "Chen"
+    given-names: "Wenliang"
+  - family-names: "Wei"
+    given-names: "Guan"
+  - family-names: "Huang"
+    given-names: "Xiaolei"
+  title: "DeepTriage-CN: Integrating Clinical Text with Vital Signs for Emergency Department Admission Prediction in an Aging Population"
+  journal: "..."
+  year: 2025
+  # 其他发表信息...

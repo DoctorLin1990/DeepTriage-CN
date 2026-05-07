@@ -1,0 +1,167 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 01 Data Exploration\n",
+    "\n",
+    "**Purpose:** Load the synthetic dataset or real data, verify its structure, and inspect key statistics reported in Section 4.1 and Table 1 of the paper.\n",
+    "\n",
+    "**Outline:**\n",
+    "1. Load data and configuration\n",
+    "2. Verify temporal split\n",
+    "3. Overview of demographics, admission rates, and missingness\n",
+    "4. Chief complaint text analysis\n",
+    "5. Age stratification"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import yaml\n",
+    "import matplotlib.pyplot as plt\n",
+    "import seaborn as sns\n",
+    "from pathlib import Path\n",
+    "\n",
+    "%matplotlib inline\n",
+    "sns.set_style(\"whitegrid\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Load configuration\n",
+    "with open(\"../config.yaml\", \"r\", encoding=\"utf-8\") as f:\n",
+    "    config = yaml.safe_load(f)\n",
+    "\n",
+    "data_path = config[\"data\"][\"raw_data_path\"]\n",
+    "train_cutoff = config[\"data\"][\"training_cutoff_date\"]\n",
+    "val_start = config[\"data\"][\"validation_start_date\"]\n",
+    "random_state = config[\"random_state\"]\n",
+    "\n",
+    "print(f\"Data path: {data_path}\")\n",
+    "print(f\"Training cutoff: {train_cutoff}, Validation start: {val_start}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Load dataset\n",
+    "df = pd.read_csv(data_path, encoding=\"utf-8-sig\", parse_dates=[\"visit_date\"])\n",
+    "print(f\"Total encounters: {len(df)}\")\n",
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Temporal split\n",
+    "train_df = df[df[\"visit_date\"] < train_cutoff].sample(frac=1, random_state=random_state).reset_index(drop=True)\n",
+    "val_df = df[df[\"visit_date\"] >= val_start].sample(frac=1, random_state=random_state).reset_index(drop=True)\n",
+    "print(f\"Training set: {len(train_df)}, Validation set: {len(val_df)}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Demographics\n",
+    "print(f\"Median age: {df['age'].median():.0f} (IQR {df['age'].quantile(0.25):.0f}-{df['age'].quantile(0.75):.0f})\")\n",
+    "print(f\"Female proportion: {1 - df['sex'].mean():.1%}\")\n",
+    "print(f\"Overall admission rate: {df['hospital_admission'].mean():.1%}\")\n",
+    "print(f\"Proportion age >=65: {(df['age'] >= 65).mean():.1%}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Admission rate by age group\n",
+    "elder_mask = df['age'] >= 65\n",
+    "print(f\"Admission rate (<65): {df[~elder_mask]['hospital_admission'].mean():.1%}\")\n",
+    "print(f\"Admission rate (>=65): {df[elder_mask]['hospital_admission'].mean():.1%}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Missing data (Table 1)\n",
+    "vitals_cols = [\"temperature\", \"heart_rate\", \"respiratory_rate\", \"sbp\", \"dbp\", \"spo2\"]\n",
+    "print(\"Missing proportions:\")\n",
+    "for col in vitals_cols + [\"chief_complaint\"]:\n",
+    "    miss = df[col].isna().mean() if col != \"chief_complaint\" else (df[\"chief_complaint\"] == \"\").mean()\n",
+    "    print(f\"  {col}: {miss:.1%}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Chief complaint length\n",
+    "comp_lens = df[\"chief_complaint\"].str.len().dropna()\n",
+    "print(f\"Mean complaint length: {comp_lens.mean():.1f} chars (SD {comp_lens.std():.1f})\")\n",
+    "plt.hist(comp_lens, bins=30, edgecolor='k')\n",
+    "plt.xlabel('Character count')\n",
+    "plt.ylabel('Frequency')\n",
+    "plt.title('Chief Complaint Length Distribution')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Top short complaints (potential sparse narratives)\n",
+    "short_texts = df[df[\"chief_complaint\"].str.len() <= 5][\"chief_complaint\"].value_counts().head(10)\n",
+    "print(\"Most frequent short complaints:\")\n",
+    "print(short_texts)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Summary**: The loaded data should align with the paper's reported cohort characteristics. If using synthetic data, the distributions will approximate but not exactly replicate the real clinical data. Proceed to `02_model_training.ipynb` for model development."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "deeptriage-cn",
+   "language": "python",
+   "name": "deeptriage-cn"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.9"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

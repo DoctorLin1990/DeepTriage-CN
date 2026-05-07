@@ -1,0 +1,123 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 04 Subgroup Analysis: Older Adults (Age ≥ 65)\n",
+    "\n",
+    "Performs the geriatric subgroup evaluation described in Section 4.4. We recompute AUROC for key models on the subset of patients aged 65 and older, and generate Figure 2b."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import sys\n",
+    "sys.path.append(\"..\")\n",
+    "\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import yaml\n",
+    "import joblib\n",
+    "from pathlib import Path\n",
+    "from sklearn.metrics import roc_auc_score, roc_curve\n",
+    "\n",
+    "from src.preprocess import load_and_split_data, preprocess_structured, preprocess_text, get_labels\n",
+    "from visualization.plot_roc import plot_roc_geriatric"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with open(\"../config.yaml\") as f:\n",
+    "    config = yaml.safe_load(f)\n",
+    "fig_dir = Path(config[\"output_paths\"][\"figures_dir\"])\n",
+    "random_state = config[\"random_state\"]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Load data\n",
+    "train_df, val_df = load_and_split_data(\n",
+    "    config[\"data\"][\"raw_data_path\"],\n",
+    "    training_cutoff_date=config[\"data\"][\"training_cutoff_date\"],\n",
+    "    validation_start_date=config[\"data\"][\"validation_start_date\"],\n",
+    "    random_state=random_state,\n",
+    ")\n",
+    "X_train_raw, X_val_raw, scaler = preprocess_structured(train_df, val_df)\n",
+    "train_texts, val_texts = preprocess_text(train_df, val_df)\n",
+    "y_train, y_val = get_labels(train_df, val_df)\n",
+    "\n",
+    "# Geriatric subset\n",
+    "elder_mask = val_df[\"age\"] >= 65\n",
+    "print(f\"Geriatric subgroup size: {elder_mask.sum()} (total val: {len(val_df)})\")\n",
+    "X_val_elder = X_val_raw[elder_mask]\n",
+    "texts_val_elder = val_texts[elder_mask].tolist()\n",
+    "y_val_elder = y_val[elder_mask]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Load models\n",
+    "deeptriage = joblib.load(\"../outputs/models/deeptriage_cn.pkl\")\n",
+    "vit_xgb = joblib.load(\"../outputs/models/vitals_only_xgb.pkl\")\n",
+    "tabnet = joblib.load(\"../outputs/models/tabnet.zip\")\n",
+    "val_scores = pd.read_csv(\"../outputs/models/clinical_scores_val.csv\")\n",
+    "\n",
+    "# Predict for subgroup\n",
+    "preds_elder = {}\n",
+    "preds_elder[\"DeepTriage-CN\"] = deeptriage.predict_proba(texts_val_elder, X_val_elder)\n",
+    "preds_elder[\"TabNet\"] = tabnet.predict_proba(X_val_elder)[:, 1]  # assuming TabNet wrapper\n",
+    "preds_elder[\"XGBoost (Vitals-only)\"] = vit_xgb.predict_proba(X_val_elder)\n",
+    "preds_elder[\"NEWS2\"] = val_scores.loc[elder_mask, \"NEWS2\"].values / 20.0\n",
+    "preds_elder[\"ESI\"] = (6 - val_scores.loc[elder_mask, \"ESI\"].values) / 5.0"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Compute AUROCs\n",
+    "geriatric_aurocs = {}\n",
+    "for name, s in preds_elder.items():\n",
+    "    auroc = roc_auc_score(y_val_elder, s)\n",
+    "    print(f\"{name} AUROC (≥65): {auroc:.3f}\")\n",
+    "    geriatric_aurocs[name] = auroc\n",
+    "\n",
+    "# Prepare ROC data for Figure 2b\n",
+    "roc_data_geriatric = {}\n",
+    "for name, s in preds_elder.items():\n",
+    "    fpr, tpr, _ = roc_curve(y_val_elder, s)\n",
+    "    roc_data_geriatric[name] = {\"fpr\": fpr, \"tpr\": tpr, \"auroc\": geriatric_aurocs[name]}\n",
+    "\n",
+    "plot_roc_geriatric(roc_data_geriatric, save_path=str(fig_dir / \"figure2b_roc_geriatric.tiff\"))\n",
+    "print(\"Figure 2b saved.\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "deeptriage-cn",
+   "language": "python",
+   "name": "deeptriage-cn"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
