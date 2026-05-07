@@ -1,7 +1,8 @@
 ```markdown
 # DeepTriage-CN: Multimodal Emergency Department Admission Prediction
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](<img width="191" height="20" alt="image" src="https://github.com/user-attachments/assets/0b5cbc2e-1856-4c7d-8bfc-3ca3b15a3445" />
+](DOI：10.5281/zenodo.20073330)
 
 This repository contains the official implementation of **DeepTriage-CN**, a late-fusion multimodal framework for predicting hospital admission from information available at emergency department (ED) triage. It integrates frozen BERT-Chinese embeddings of nurse-recorded chief complaints with structured vital signs using an XGBoost classifier.
 
