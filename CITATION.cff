@@ -1,0 +1,16 @@
+cff-version: 1.1.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Lin
+    given-names: Wenjia
+  - family-names: Chen
+    given-names: Wenliang
+  - family-names: Wei
+    given-names: Guan
+  - family-names: Huang
+    given-names: Xiaolei
+title: "DeepTriage-CN: Integrating Clinical Text with Vital Signs for Emergency Department Admission Prediction in an Aging Population"
+version: v1.0.0
+date-released: 2025-05-08
+repository-code: "https://github.com/DoctorLin1990/DeepTriage-CN"
+license: MIT
