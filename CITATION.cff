@@ -12,5 +12,3 @@ authors:
 title: "DeepTriage-CN: Integrating Clinical Text with Vital Signs for Emergency Department Admission Prediction in an Aging Population"
 version: v1.0.0
 date-released: 2025-05-08
-repository-code: "https://github.com/DoctorLin1990/DeepTriage-CN"
-license: MIT
