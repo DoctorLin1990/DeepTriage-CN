@@ -1,0 +1,57 @@
+# config.yaml
+# DeepTriage-CN — Centralised hyperparameter and path configuration
+# All values are cited from the paper (section references included).
+# -----------------------------------------------------------------------
+
+random_state: 42
+
+# ── Data ─────────────────────────────────────────────────────────────────
+data:
+  raw_data_path:         "data/synthetic_ed_visits.csv"   # replace with real path
+  training_cutoff_date:  "2024-01-01"   # Section 3.2: visits before → training
+  validation_start_date: "2024-01-01"   # Section 3.2: visits from → validation
+  # Expected sizes: train 8,000 | val 2,000 (Section 3.2)
+
+# ── Text processing (Section 3.4) ───────────────────────────────────────
+text_processing:
+  model_name:   "bert-base-chinese"   # frozen BERT-Chinese encoder
+  max_length:   64                    # covers >99th percentile of lengths
+
+# ── DeepTriage-CN XGBoost hyperparameters (Section 3.5) ─────────────────
+xgboost:
+  n_estimators:     200
+  learning_rate:    0.05
+  max_depth:        6
+  subsample:        0.8
+  colsample_bytree: 0.8
+  # scale_pos_weight: auto-computed from training class distribution
+
+# ── TabNet hyperparameters (Section 3.6) ────────────────────────────────
+tabnet:
+  n_d:           32
+  n_a:           32
+  n_steps:       5
+  gamma:         1.5
+  lambda_sparse: 0.0001
+  max_epochs:    200
+  batch_size:    256
+  virtual_batch_size: 128
+  patience:      20
+
+# ── Robustness simulation (Section 3.7) ─────────────────────────────────
+robustness:
+  missing_proportions:   [0.10, 0.20, 0.30]   # Bug L3 fix: all three levels
+  noise_sigma_multiplier: 0.5                  # ε ~ N(0, 0.5 · σ_x)
+
+# ── Evaluation (Section 3.8) ─────────────────────────────────────────────
+evaluation:
+  optimal_threshold: 0.28   # Youden-optimal threshold from training set
+  n_bootstrap:       1000   # bootstrap iterations for 95% CIs
+  n_groups_hl:       10     # Hosmer–Lemeshow decile groups
+
+# ── Output paths ─────────────────────────────────────────────────────────
+output_paths:
+  models_dir:  "outputs/models"
+  results_dir: "outputs/results"
+  figures_dir: "outputs/figures"
+  logs_dir:    "outputs/logs"
