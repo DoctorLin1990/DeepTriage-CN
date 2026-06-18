@@ -1,0 +1,144 @@
+{
+  "_description": "DeepTriage-CN feature schema. All statistics from the temporal validation set (N=2,000) unless noted. Missing rates from Table 1 of the paper.",
+  "_cohort": {
+    "total_encounters": 10000,
+    "training_set_n": 8000,
+    "validation_set_n": 2000,
+    "date_range_training": "2023-01-01 to 2023-12-31",
+    "date_range_validation": "2024-01-01 to 2024-03-31",
+    "admission_rate_overall": 0.220,
+    "admission_rate_geriatric": 0.337,
+    "admission_rate_non_geriatric": 0.190,
+    "geriatric_n_validation": 410,
+    "median_age": 48,
+    "iqr_age": "34–62"
+  },
+  "structured_features": [
+    {
+      "internal_name": "age",
+      "raw_column":    "Age",
+      "description":   "Patient age at time of triage registration (years)",
+      "type":          "continuous",
+      "unit":          "years",
+      "missing_rate":  0.0,
+      "paper_section": "3.3"
+    },
+    {
+      "internal_name": "sex",
+      "raw_column":    "Gender",
+      "description":   "Biological sex recorded at triage (0=Female, 1=Male)",
+      "type":          "binary",
+      "unit":          null,
+      "missing_rate":  0.0,
+      "paper_section": "3.3"
+    },
+    {
+      "internal_name": "temperature",
+      "raw_column":    "Temperature",
+      "description":   "Tympanic or axillary temperature at triage",
+      "type":          "continuous",
+      "unit":          "°C",
+      "missing_rate_overall": 0.035,
+      "missing_rate_young":   0.034,
+      "missing_rate_elder":   0.037,
+      "p_value_missing_diff": 0.56,
+      "paper_section": "3.3 / Table 1"
+    },
+    {
+      "internal_name": "heart_rate",
+      "raw_column":    "Pulse",
+      "description":   "Heart rate measured at triage (beats per minute)",
+      "type":          "continuous",
+      "unit":          "bpm",
+      "missing_rate_overall": 0.021,
+      "missing_rate_young":   0.020,
+      "missing_rate_elder":   0.023,
+      "p_value_missing_diff": 0.41,
+      "paper_section": "3.3 / Table 1"
+    },
+    {
+      "internal_name": "respiratory_rate",
+      "raw_column":    "Respiratory_Rate",
+      "description":   "Respiratory rate measured at triage (breaths per minute)",
+      "type":          "continuous",
+      "unit":          "/min",
+      "missing_rate_overall": 0.052,
+      "missing_rate_young":   0.051,
+      "missing_rate_elder":   0.055,
+      "p_value_missing_diff": 0.38,
+      "paper_section": "3.3 / Table 1"
+    },
+    {
+      "internal_name": "sbp",
+      "raw_column":    "Systolic_BP",
+      "description":   "Systolic blood pressure measured at triage (mmHg)",
+      "type":          "continuous",
+      "unit":          "mmHg",
+      "missing_rate_overall": 0.018,
+      "missing_rate_young":   0.017,
+      "missing_rate_elder":   0.020,
+      "p_value_missing_diff": 0.32,
+      "paper_section": "3.3 / Table 1"
+    },
+    {
+      "internal_name": "dbp",
+      "raw_column":    "Diastolic_BP",
+      "description":   "Diastolic blood pressure measured at triage (mmHg)",
+      "type":          "continuous",
+      "unit":          "mmHg",
+      "missing_rate_overall": 0.020,
+      "missing_rate_young":   0.019,
+      "missing_rate_elder":   0.022,
+      "p_value_missing_diff": 0.29,
+      "paper_section": "3.3 / Table 1"
+    },
+    {
+      "internal_name": "spo2",
+      "raw_column":    "SpO2",
+      "description":   "Peripheral oxygen saturation measured at triage (%). Highest missingness due to equipment non-availability for ambulatory patients.",
+      "type":          "continuous",
+      "unit":          "%",
+      "missing_rate_overall": 0.082,
+      "missing_rate_young":   0.081,
+      "missing_rate_elder":   0.085,
+      "p_value_missing_diff": 0.49,
+      "paper_section": "3.3 / Table 1"
+    }
+  ],
+  "text_feature": {
+    "internal_name": "chief_complaint",
+    "raw_column":    "Chief_Complaint",
+    "description":   "Nurse-recorded triage chief complaint in Mandarin Chinese. Entered at first triage contact. In this Southeast China cohort, nurses translate from regional dialects (Minnan / Hakka) to standardised Mandarin in real time.",
+    "type":          "free_text",
+    "language":      "zh-CN",
+    "mean_length_words": 8.3,
+    "sd_length_words":   4.1,
+    "missing_rate_overall": 0.024,
+    "missing_handling":  "Replaced with [MISSING] token before BERT tokenisation",
+    "bert_model":    "bert-base-chinese",
+    "embedding_dim": 768,
+    "paper_section": "3.3 / 3.4 / 3.5"
+  },
+  "outcome": {
+    "internal_name": "hospital_admission",
+    "raw_column":    "Hospital_Admission",
+    "description":   "Binary indicator: 1 = transferred from ED to any inpatient ward; 0 = discharged from ED. Recorded in the hospital information system.",
+    "type":          "binary",
+    "caveats":       "Confounded by ED census, bed availability, and physician risk tolerance. Reflects operational practice rather than purely physiological acuity.",
+    "paper_section": "3.3"
+  },
+  "auxiliary_fields": {
+    "patient_id": {
+      "raw_column":  "Patient_ID",
+      "description": "De-identified patient identifier. Used to deduplicate (first visit per patient retained)."
+    },
+    "visit_date": {
+      "raw_column":  "visit_date",
+      "description": "ISO 8601 datetime of triage registration. Used for temporal train/validation split."
+    },
+    "esi": {
+      "raw_column":  "ESI",
+      "description": "Emergency Severity Index (1–5). Used as a benchmark comparator (Section 3.6). Not an input to DeepTriage-CN."
+    }
+  }
+}

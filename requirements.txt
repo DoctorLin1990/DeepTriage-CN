@@ -1,0 +1,33 @@
+# DeepTriage-CN — Python dependencies
+# Tested on Python 3.9, 3.10, 3.11
+
+# ── Deep learning & NLP ──────────────────────────────────────────────
+torch>=1.13.0
+transformers>=4.30.0
+
+# ── Gradient boosting ────────────────────────────────────────────────
+xgboost>=1.7.0
+pytorch-tabnet>=4.0.0
+
+# ── Classical ML ─────────────────────────────────────────────────────
+scikit-learn>=1.2.0
+
+# ── Explainability ───────────────────────────────────────────────────
+shap>=0.42.0
+
+# ── Data handling ────────────────────────────────────────────────────
+numpy>=1.23.0
+pandas>=1.5.0
+scipy>=1.9.0
+
+# ── Visualisation ────────────────────────────────────────────────────
+matplotlib>=3.6.0
+Pillow>=9.0.0
+
+# ── Configuration & utilities ────────────────────────────────────────
+pyyaml>=6.0
+joblib>=1.2.0
+tqdm>=4.64.0
+
+# ── Testing ──────────────────────────────────────────────────────────
+pytest>=7.2.0

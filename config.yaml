@@ -1,0 +1,126 @@
+# =============================================================================
+# DeepTriage-CN — Configuration File
+# Single source of truth for all hyperparameters, paths, and settings.
+# All values correspond exactly to those reported in the paper.
+# =============================================================================
+
+random_state: 42
+
+# -----------------------------------------------------------------------------
+# Data
+# -----------------------------------------------------------------------------
+data:
+  raw_data_path:         "data/ed_visits.csv"      # Replace with your real dataset
+  training_cutoff_date:  "2024-01-01"              # Section 3.2: visits 2023-01-01 to 2023-12-31
+  validation_start_date: "2024-01-01"              # Section 3.2: visits 2024-01-01 to 2024-03-31
+  min_age: 18                                      # Adults only (Section 3.2)
+  label_column: "hospital_admission"
+  date_column:  "visit_date"
+  patient_id_column: "patient_id"
+
+# Column names in the raw CSV → internal names used throughout the codebase
+column_mapping:
+  Age:              "age"
+  Gender:           "sex"
+  Temperature:      "temperature"
+  Pulse:            "heart_rate"
+  Respiratory_Rate: "respiratory_rate"
+  Systolic_BP:      "sbp"
+  Diastolic_BP:     "dbp"
+  SpO2:             "spo2"
+  Chief_Complaint:  "chief_complaint"
+  Hospital_Admission: "hospital_admission"
+  visit_date:       "visit_date"
+  Patient_ID:       "patient_id"
+
+# Sex encoding: the string value that maps to 1 (male)
+sex_positive_value: "Male"
+
+# -----------------------------------------------------------------------------
+# Text processing  (Section 3.4 / 3.5)
+# -----------------------------------------------------------------------------
+text_processing:
+  model_name: "bert-base-chinese"   # Frozen encoder; HuggingFace Hub
+  max_length: 64                    # Tokens; accommodates mean CC length of 8.3 words
+  missing_token: "[MISSING]"        # Replaces absent chief complaints (2.4% of visits)
+  batch_size: 64                    # Inference batch size for BERT encoding
+
+# -----------------------------------------------------------------------------
+# XGBoost classifier  (Section 3.5)
+# -----------------------------------------------------------------------------
+xgboost:
+  n_estimators:    200
+  learning_rate:   0.05
+  max_depth:       6
+  subsample:       0.8
+  colsample_bytree: 0.8
+  tree_method:     "hist"           # GPU-compatible; falls back to CPU automatically
+  # scale_pos_weight computed at runtime from class distribution
+
+# -----------------------------------------------------------------------------
+# TabNet baseline  (Section 3.6)
+# Optimised via grid search: N_d∈{16,32,64}, N_a∈{16,32,64},
+# N_steps∈{3,5,7}, gamma∈{1.0,1.5,2.0}, lambda_sparse∈{0.0001,0.00001}
+# -----------------------------------------------------------------------------
+tabnet:
+  n_d:           32
+  n_a:           32
+  n_steps:       5
+  gamma:         1.5
+  lambda_sparse: 0.0001
+  optimizer:     "adamw"
+  max_epochs:    200
+  batch_size:    256
+  virtual_batch_size: 128
+  patience:      15                 # Early stopping patience (epochs)
+
+# -----------------------------------------------------------------------------
+# Random Forest baseline  (Section 3.6)
+# -----------------------------------------------------------------------------
+random_forest:
+  n_estimators: 200
+  max_depth:    6
+
+# -----------------------------------------------------------------------------
+# Robustness simulation  (Section 3.7)
+# MNAR: inverse logistic decay centred on normal physiological range
+# -----------------------------------------------------------------------------
+robustness:
+  missing_proportions:     [0.10, 0.20, 0.30]   # Aggregate MNAR proportions
+  noise_sigma_multiplier:  0.5                   # ε ~ N(0, 0.5·σ_x)
+  n_repetitions:           5                     # Runs per proportion (for stability)
+
+# -----------------------------------------------------------------------------
+# Evaluation  (Section 3.8)
+# -----------------------------------------------------------------------------
+evaluation:
+  optimal_threshold: 0.28          # Youden-optimal on training set (Section 4.2)
+  n_bootstrap:       1000          # Bootstrap resamples for 95% CIs
+  calibration_bins:  10            # Bins for calibration plot and HL test
+  dca_threshold_min: 0.02          # DCA threshold range lower bound
+  dca_threshold_max: 0.90          # DCA threshold range upper bound
+
+# Geriatric subgroup definition
+geriatric_age_threshold: 65
+
+# Alert burden thresholds (Table 4)
+alert_thresholds: [0.15, 0.28, 0.40, 0.50]
+
+# -----------------------------------------------------------------------------
+# Figure settings
+# -----------------------------------------------------------------------------
+figures:
+  dpi:    300
+  format: "tiff"
+  compression: "tiff_lzw"
+  width_single_col: 3.5    # inches
+  width_double_col: 7.2    # inches
+
+# -----------------------------------------------------------------------------
+# Output paths
+# -----------------------------------------------------------------------------
+output_paths:
+  models_dir:  "outputs/models"
+  results_dir: "outputs/results"
+  figures_dir: "outputs/figures"
+  logs_dir:    "outputs/logs"
